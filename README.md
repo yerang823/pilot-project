@@ -12,8 +12,12 @@
     - Canonical 및 Derivative form 의 Plot 리턴
     
 ## Install
-    ```pip install gradio```
+    ```
+    pip install gradio
+    ```
 
 
 ## Usage
-    ```python calculator.py```
+    ```
+    python calculator.py
+    ```
