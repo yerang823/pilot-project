@@ -2,6 +2,8 @@
 
 [PPT](https://docs.google.com/presentation/d/19pCcvJf3kj0DxuNxWxODkpXdeyBhSjTH/edit?usp=sharing&ouid=118058427277428105043&rtpof=true&sd=true)
 
+[Test Cases](https://crystalline-sing-615.notion.site/Pilot-project-test-case-16faeb89a84d4312bdc46a77361e2198)
+
 - 지원되는 기능
     - 수식 및 x, y 에 대입할 값 각각 입력
     - Canonical form 리턴

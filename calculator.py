@@ -1,8 +1,10 @@
 import math as m
 import numpy as np
 import matplotlib.pyplot as plt
-import gradio as gr
 
+# =========================================================================== 
+# class 구현
+# =========================================================================== 
 
 class Node:
     def __init__(self):
@@ -30,25 +32,25 @@ class AddNode(Node):
         # 일단 add_node에 모두 추가 -> [(Num), (AddNode), (var)]
         add_node = AddNode()
         for subset in self.subset:
-            add_node.push(subset.canonical())                         # canonical 가능한지점까지 한다음 push
+            add_node.push(subset.canonical())                           # canonical 가능한지점까지 한다음 push
 
         # 추가된 것들 중 다시 더할 것 있으면 처리 -> [(2), (x+1), (y)] -> [(2), (y), (x), (1)]
         for i in range(len(add_node.subset)):
-            if isinstance(add_node.subset[i], AddNode):               # 각 term 에 또 더할것이 있으면               
-                temp = add_node.subset.pop(i).subset                 # 타입 변경해서 push 해주려고 .subset 함
+            if isinstance(add_node.subset[i], AddNode):                 # 각 term 에 또 더할것이 있으면               
+                temp = add_node.subset.pop(i).subset                    # 타입 변경해서 push 해주려고 .subset 함
                 add_node.push(temp)
                 return add_node.canonical()
         
         ## (add_node.subset 중에 더할것 없는 상태임)
         # add_node 의 항들을 같은 변수끼리 묶어 합치기(canonical)
         tmp_dic = {'&': 0}        
-        for i in add_node.subset:                                     # add_node = [2*x, log(x)]
+        for i in add_node.subset:                                       # add_node = [2*x, log(x)]
             if isinstance(i, NumNode):
                 tmp_dic['&'] += i.value
 
-            else:                                                      # mul, tril, log, var, power
+            else:                                                       # mul, tril, log, var, power
                 if isinstance(i, MulNode) and isinstance(i.subset[0], NumNode):             # 2*x, 3*log(x), ...
-                    coeff = i.subset.pop(0)                            # 2
+                    coeff = i.subset.pop(0)                             # 2
                     term_node = i                                       # x
                     
                     # tmp_dic 에 현재 항과 동일한 변수가 있는지 확인
@@ -56,20 +58,20 @@ class AddNode(Node):
                         tmp_dic[str(term_node)] = (term_node, coeff)    # tmp_dic ={'x':(x, 2)} # 없으면 새로 추가
                     else:
                         add_coef = AddNode()
-                        add_coef.push(tmp_dic[str(term_node)][1])        # 있으면 기존에 있는 같은 변수(x)의 coeff 를 add_node에 push
-                        add_coef.push(coeff)                             # 현재의 coeff 도 push
+                        add_coef.push(tmp_dic[str(term_node)][1])       # 있으면 기존에 있는 같은 변수(x)의 coeff 를 add_node에 push
+                        add_coef.push(coeff)                            # 현재의 coeff 도 push
                         add_coef = add_coef.canonical() 
-                        tmp_dic[str(term_node)] = (term_node, add_coef)  # tmp_dic = {'x':(x, 5)}
-                else:                                                   # log(x)
+                        tmp_dic[str(term_node)] = (term_node, add_coef) # tmp_dic = {'x':(x, 5)}
+                else:                                                   # log(x), x*log(x), ...
                     # tmp_dic에 현재 항과 동일한 변수가 있는지 확인
                     if str(i) not in tmp_dic.keys():
-                        tmp_dic[str(i)] = (i, NumNode(1))                # tmp_dic['log(x)'] = (log(x), 1)
+                        tmp_dic[str(i)] = (i, NumNode(1))               # tmp_dic['log(x)*x'] = (log(x)*x, 1)
                     else:
                         add_coef = AddNode()
-                        add_coef.push(tmp_dic[str(i)][1])                 # 기존에 있는 key ('log(x)')의 coeff (ex.2) 를 add
-                        add_coef.push(NumNode(1))                         # 현재 나의 coeff (1) add
+                        add_coef.push(tmp_dic[str(i)][1])               # 기존에 있는 key ('log(x)')의 coeff (ex.2) 를 add
+                        add_coef.push(NumNode(1))                       # 현재 나의 coeff (1) add
                         add_coef = add_coef.canonical()      
-                        tmp_dic[str(i)] = (i, add_coef)                   # 기존에 있던 key 는 새로운 value 가짐 # tmp_dic['log(x)'] = (log(x), 3)
+                        tmp_dic[str(i)] = (i, add_coef)                 # 기존에 있던 key 는 새로운 value 가짐 # tmp_dic['log(x)*x'] = (log(x)*x, 3)
 
         sorting = list(tmp_dic.keys())
         sorting.sort()
@@ -97,32 +99,32 @@ class AddNode(Node):
             mul_node = MulNode()
             mul_node.push(tmp_dic[i][0])                # mulnode ('x')
             mul_node.push(tmp_dic[i][1])                # 3
-            return mul_node.canonical()                # 3*x
+            return mul_node.canonical()                 # 3*x
         # 하나이상 남았을 때는 계수*변수 곱하여 push, add_node 리턴
-        else:                                          # tmp_dic = {'x':(mulnode, 3), 'x^2':(mulnode, 5)}
+        else:                                           # tmp_dic = {'x':(x, 3), 'x^2':(x^2, 5)}
             add_node.subset = []
             sorting = list(tmp_dic.keys())
             sorting.sort()
-            for i in sorting:                          # ['&','x','x^2']
-                if i == '&':                           # 상수항일때
+            for i in sorting:                           # ['&','x','x^2']
+                if i == '&':                            # 상수항일때
                     add_node.push(NumNode(tmp_dic[i]))
-                else:                                  # 상수항 아닐때
+                else:                                   # 상수항 아닐때
                     mul_node = MulNode()
                     mul_node.push(tmp_dic[i][1])        # 5
                     mul_node.push(tmp_dic[i][0])        # x^2
                     add_node.push(mul_node.canonical()) # 5*x^2
 
-            return add_node                            # [3*x, 5*x^2]
+            return add_node                             # [3*x, 5*x^2]
 
     def diff(self, var):
         temp = []
-        for i in range(len(self.subset)):              # 각 항을 미분한 다음 더해
+        for i in range(len(self.subset)):               # 각 항을 미분한 다음 더해
             temp.append(self.subset[i].diff(var))
         add_node = AddNode()
         add_node.push(temp)
         return add_node
 
-    def evaluate(self, x, y):                            # 각 항에 x or y 값 넣은 다음 더해
+    def evaluate(self, x, y):                           # 각 항에 x or y 값 넣은 다음 더해
         add_node = AddNode()
         for i in range(len(self.subset)):
             add_node.push(self.subset[i].evaluate(x,y))
@@ -151,7 +153,7 @@ class MulNode(Node):
         # 추가된 것들 중 다시 곱할 것 있으면 처리 
         for i in range(len(mul_node.subset)):                
             if isinstance(mul_node.subset[i], MulNode):       # (2*x)*x^2 -> [2*x, x^2]
-                mul_subset = mul_node.subset.pop(i).subset  # mul_subset = 2*x
+                mul_subset = mul_node.subset.pop(i).subset    # mul_subset = 2*x
                 mul_node.push(mul_subset)                     # result = [x^2, 2, x]
                 return mul_node.canonical()
         
@@ -159,21 +161,21 @@ class MulNode(Node):
         for i in range(len(mul_node.subset)):                
             if isinstance(mul_node.subset[i], AddNode):       # [(x+1), x^2]  의 (x+1)
                 add_node = AddNode()
-                add_subset = mul_node.subset.pop(i).subset  # add_subset = (x+1)
-                for j in add_subset:                         # mul_node [(x+1), x^2] -> add_node [x*x^2, 1*x^2]
+                add_subset = mul_node.subset.pop(i).subset    # add_subset = (x+1)
+                for j in add_subset:                          # mul_node [(x+1), x^2] -> add_node [x*x^2, 1*x^2]
                     temp = MulNode()
                     temp.push(j)                               
-                    temp.push(mul_node.subset)#[i])           
+                    temp.push(mul_node.subset)          
                     add_node.push(temp)                        
                 return add_node.canonical()
         
         
-        ## (mul_node.subset 내에 (a+b)*x 또는 (a*b)*x 없는상태)
+        ## (mul_node.subset 내에 (a*b)*x 또는 (a+b)*x 없는상태)
         # mul_node 의 항들을 같은 변수끼리 묶어 합치기(canonical)
         tmp_dic = {'&': 1}                 
         for i in mul_node.subset:                            
             if isinstance(i, PowerNode):                      # x^2 * x^3 -> x^(2+3)    # powernode는 base, expo로 접근해야해서 if문 따로
-                if str(i.base) not in tmp_dic.keys():        # key 에 base 없으면 추가
+                if str(i.base) not in tmp_dic.keys():         # key 에 base 없으면 추가
                     tmp_dic[str(i.base)] = (i.base, i.exponent)
                 else:                                         # key 에 base 있으면
                     add_exp = AddNode()
@@ -198,26 +200,26 @@ class MulNode(Node):
         sorting.sort()
         
         ## (tmp_dic 생성 이후 후처리)
-        sorting.pop(0)                            ##상수항 제외하고 for문 처리하려고
-        for i in sorting:                        # 계수가 0인 항 있으면 삭제 (x^0) - 곱해봤자 1
+        sorting.pop(0)                                         # 상수항 제외하고 for문 처리하려고
+        for i in sorting:                                      # 계수가 0인 항 있으면 삭제 (x^0) - 곱해봤자 1
             if isinstance(tmp_dic[i][1], NumNode):
                 if tmp_dic[i][1].value == 0:
                     tmp_dic.pop(i)
 
-        if len(tmp_dic) == 1:                     # 항이 1개면 숫자 리턴
+        if len(tmp_dic) == 1:                                  # 항이 1개면 숫자 리턴
             return NumNode(tmp_dic['&'])
-        elif tmp_dic['&'] == 0:                   # 상수항 0이면 0 리턴 - 곱해봤자 0
+        elif tmp_dic['&'] == 0:                                # 상수항 0이면 0 리턴 - 곱해봤자 0
             return NumNode(0)
-        elif tmp_dic['&'] == 1:                   # 상수항 1이면 상수항 제거 - 곱해봤자 1
+        elif tmp_dic['&'] == 1:                                # 상수항 1이면 상수항 제거 - 곱해봤자 1
             tmp_dic.pop('&')
 
         
         # 상수항 처리하고 나서 1개만 남을 경우
-        if len(tmp_dic) == 1:                                                          # {'x':(x, 3)},  
+        if len(tmp_dic) == 1:                                  # {'x':(x, 3)} -> x^3
             i = list(tmp_dic.keys())[0]
-            return PowerNode(tmp_dic[i][0], tmp_dic[i][1]).canonical()                # {'x': (x,3)} 인 경우 x^3 
+            return PowerNode(tmp_dic[i][0], tmp_dic[i][1]).canonical()                
         # 상수항 처리하고 나서 항 여러개 남은 경우
-        else:                                       
+        else:                                                  # {'x':(x,3), 'log(x)':(log(x),2)} -> [x^3 * (log*(x))^2] 
             mul_node.subset = []
             sorting = list(tmp_dic.keys())
             sorting.sort()
@@ -225,22 +227,22 @@ class MulNode(Node):
                 if i == '&':
                     mul_node.push(NumNode(tmp_dic[i]))
                 else:
-                    mul_node.push(PowerNode(tmp_dic[i][0], tmp_dic[i][1]).canonical()) # {'x':(x,3), 'log(x)':(log(x),2)} -> [x^3 * (log*(x))^2] 
+                    mul_node.push(PowerNode(tmp_dic[i][0], tmp_dic[i][1]).canonical()) 
             return mul_node
 
-    def diff(self, var):
+    def diff(self, var):                                       # 각 항을 미분 및 곱해서 더해
         add_node = AddNode()
-        for i in range(len(self.subset)):          # x*log(x)*sin(x) -> log(x)*sin(x) + x*(1/x)*sinx + x*log(x)*cos(x)
+        for i in range(len(self.subset)):                      # x*log(x)*sin(x) -> log(x)*sin(x) + x*(1/x)*sinx + x*log(x)*cos(x)
             mul_node = MulNode()
             for j in range(len(self.subset)):
                 if j == i:
-                    mul_node.push(self.subset[j].diff(var)) # 미분할 항
+                    mul_node.push(self.subset[j].diff(var))    # 미분할 항
                 else:
                     mul_node.push(self.subset[j])
             add_node.push(mul_node)
         return add_node
 
-    def evaluate(self, x, y):                        # 각 항에 x or y 값 넣은 다음 곱해
+    def evaluate(self, x, y):                                  # 각 항에 x or y 값 넣은 다음 곱해
         mul_node = MulNode()
         for i in range(len(self.subset)):
             mul_node.push(self.subset[i].evaluate(x,y))
@@ -391,13 +393,14 @@ class PowerNode:
         _base = self.base.canonical()
         _exp = self.exponent.canonical()
     
+        # ================ base, exp 모두 추가적인 Node 연산 필요 없는 경우 =============== #
         # 상수 되는것들 먼저 처리
         if isinstance(_base, NumNode) and isinstance(_exp, NumNode): # 2^2 
             try:
                 temp = float(_base.value**_exp.value)
                 return NumNode(temp)
             except:
-                raise ValueError('Invalid number for power')
+                raise ValueError('Invalid number')
         
         # base 가 NumNode 일때 0, 1 되는 경우 처리
         if isinstance(_base, NumNode):                    # 0^(x), 1^(x), (-2)^(x) ...
@@ -406,7 +409,7 @@ class PowerNode:
             elif _base.value == 1:
                 return NumNode(1)
             elif _base.value < 0:
-                return ValueError('Invalid number for power')
+                return ValueError('Invalid number')
 
         # expo 가 NumNode 일때 1 or base or inverse 되는 경우 처리
         if isinstance(_exp, NumNode):                     # x^0, x^1, x^(-2) ...
@@ -417,6 +420,8 @@ class PowerNode:
             elif _exp.value < 0:                          # x^(-2) -> 1/(x^2)
                 return InverseNode(PowerNode(_base, NumNode(_exp.value*(-1)))).canonical() # *(-1 ) : 다시 양수로 만들어주고 역수만들려고
 
+        
+        # ====================== base 에 추가 Node 연산 필요한 경우 ===================== #
         # base 가 powerNode 인 경우 지수끼리 곱한 후 재귀
         if isinstance(_base, PowerNode):                  # (2^x)^3  -> 2^(x*3)            
             mul_node = MulNode()
@@ -437,6 +442,7 @@ class PowerNode:
                 mul_node.push(PowerNode(subset, _exp)) 
             return mul_node.canonical()
 
+        # ==================== exp 가 NumNode 또는 exp 에 변수 있을때 =================== #
         # exp 가 NumNode
         if isinstance(_exp, NumNode):     
             # exp 가 int 이고 base 가 addnode 일때 -> 지수, 밑 전개
@@ -476,7 +482,7 @@ class ExpVarNode(PowerNode):
         mul_1 = MulNode()                       # diff 전에 a^b -> e^(log(a)*b) 꼴로 바꿔줌
         mul_1.push(self.exponent)
         mul_1.push(LogNode(self.base))
-        self.base = NumNode(e)
+        self.base = NumNode(m.e)
         self.exponent = mul_1.canonical()
         
         mul_node = MulNode()                    
@@ -527,8 +533,6 @@ class NumNode:
 # Tokenizing & Parsing
 # =========================================================================== 
         
-e = m.e
-pi = m.pi
 
 func_list = ['sin','cos','tan','log']
 const_list = ['e','pi']
@@ -637,7 +641,7 @@ def takeFuncNode(tokens): # FuncNode -> -FuncNode | 'sin' FuncNode | 'cos' FuncN
     else:
         return takeTerminalNode(tokens)                                           
 
-const_dic = {'e':e, 'pi':pi}
+const_dic = {'e':m.e, 'pi':m.pi}
 
 def takeTerminalNode(tokens):                      # TerminalNode -> (AddNode)(^FuncNode) | Var(^FuncNode) | Num(^FuncNode) | const(^FuncNode)
     if tokens[0] == '(':          # (AddNode)
