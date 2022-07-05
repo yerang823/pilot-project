@@ -10,10 +10,13 @@
     - Continuity 여부 리턴
     - Differentiability 여부 리턴
     - Canonical 및 Derivative form 의 Plot 리턴
+    - GUI 구현 (Gradio)
     
 ## Install
 ```
 pip install gradio
+pip install numpy
+pip install matplotlib
 ```
 
 
